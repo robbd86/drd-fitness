@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { theme, commonStyles } from "./theme";
 
 function getWeeklyAverage(nutrition) {
   if (!nutrition.length) return null;
@@ -25,40 +26,93 @@ function getWeeklyAverage(nutrition) {
 
 function SummaryCard({ weeklyAvg, targets }) {
   const highlight = (actual, target) => {
-    if (!target) return "black";
-    return actual >= target ? "green" : "red";
+    if (!target) return theme.colors.text.primary;
+    return actual >= target ? theme.colors.success : theme.colors.error;
   };
 
+  const statCardStyle = {
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.medium,
+    backgroundColor: theme.colors.background.accent,
+    textAlign: "center",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: "120px",
+  };
+
+  const statNumberStyle = {
+    fontSize: "24px",
+    fontWeight: "bold",
+    margin: "10px 0",
+  };
+
+  const statLabelStyle = {
+    fontSize: "14px",
+    color: theme.colors.text.secondary,
+    margin: 0,
+  };
+
+  const targetStyle = {
+    fontSize: "12px",
+    color: theme.colors.text.secondary,
+    margin: 0,
+  };
+  
   return (
     <div style={{
-      border: "1px solid #ccc",
-      borderRadius: "10px",
-      padding: "20px",
-      marginBottom: "20px",
-      backgroundColor: "#f9f9f9",
-      textAlign: "center"
+      borderRadius: theme.borderRadius.medium,
+      padding: theme.spacing.lg,
+      marginBottom: theme.spacing.lg,
+      backgroundColor: theme.colors.background.secondary,
+      boxShadow: theme.shadows.small,
+      border: `1px solid ${theme.colors.background.accent}`,
     }}>
-      <h3 style={{ marginBottom: "15px" }}>Weekly Nutrition Averages</h3>
-      <div style={{ display: "flex", justifyContent: "center", gap: "40px" }}>
-        <div>
-          <strong>Calories</strong>
-          <p style={{ color: highlight(weeklyAvg.calories, targets.calories) }}>{weeklyAvg.calories}</p>
-          <small>Target: {targets.calories}</small>
+      <h3 style={{ 
+        marginBottom: theme.spacing.md, 
+        color: theme.colors.text.primary,
+        fontSize: theme.typography.heading.h3,
+        position: "relative",
+        paddingLeft: theme.spacing.md,
+        display: "flex",
+        alignItems: "center",
+      }}>
+        <div style={{
+          width: "3px",
+          height: "20px",
+          backgroundColor: theme.colors.accent.primary,
+          position: "absolute",
+          left: "0",
+          borderRadius: theme.borderRadius.small,
+        }}></div>
+        Weekly Nutrition Averages
+      </h3>
+      <div style={{ 
+        display: "flex", 
+        justifyContent: "space-around", 
+        flexWrap: "wrap", 
+        gap: theme.spacing.md 
+      }}>
+        <div style={statCardStyle}>
+          <p style={statLabelStyle}>Calories</p>
+          <p style={{...statNumberStyle, color: highlight(weeklyAvg.calories, targets.calories)}}>{weeklyAvg.calories}</p>
+          <p style={targetStyle}>Target: {targets.calories}</p>
         </div>
-        <div>
-          <strong>Protein</strong>
-          <p style={{ color: highlight(weeklyAvg.protein, targets.protein) }}>{weeklyAvg.protein}g</p>
-          <small>Target: {targets.protein}g</small>
+        <div style={statCardStyle}>
+          <p style={statLabelStyle}>Protein</p>
+          <p style={{...statNumberStyle, color: highlight(weeklyAvg.protein, targets.protein)}}>{weeklyAvg.protein}g</p>
+          <p style={targetStyle}>Target: {targets.protein}g</p>
         </div>
-        <div>
-          <strong>Carbs</strong>
-          <p style={{ color: highlight(weeklyAvg.carbs, targets.carbs) }}>{weeklyAvg.carbs}g</p>
-          <small>Target: {targets.carbs}g</small>
+        <div style={statCardStyle}>
+          <p style={statLabelStyle}>Carbs</p>
+          <p style={{...statNumberStyle, color: highlight(weeklyAvg.carbs, targets.carbs)}}>{weeklyAvg.carbs}g</p>
+          <p style={targetStyle}>Target: {targets.carbs}g</p>
         </div>
-        <div>
-          <strong>Fats</strong>
-          <p style={{ color: highlight(weeklyAvg.fats, targets.fats) }}>{weeklyAvg.fats}g</p>
-          <small>Target: {targets.fats}g</small>
+        <div style={statCardStyle}>
+          <p style={statLabelStyle}>Fats</p>
+          <p style={{...statNumberStyle, color: highlight(weeklyAvg.fats, targets.fats)}}>{weeklyAvg.fats}g</p>
+          <p style={targetStyle}>Target: {targets.fats}g</p>
         </div>
       </div>
     </div>
@@ -75,7 +129,11 @@ export default function NutritionDashboard({ nutrition, targets = { calories: 25
 
   return (
     <div>
-      {weeklyAvg ? <SummaryCard weeklyAvg={weeklyAvg} targets={targets} /> : <p>No nutrition data to summarize.</p>}
+      {weeklyAvg ? (
+        <SummaryCard weeklyAvg={weeklyAvg} targets={targets} />
+      ) : (
+        <p style={{ color: theme.colors.text.secondary }}>No nutrition data to summarize.</p>
+      )}
     </div>
   );
 }

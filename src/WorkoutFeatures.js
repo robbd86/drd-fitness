@@ -1,343 +1,690 @@
 import React, { useState, useEffect, useRef } from 'react';
-
-// Exercise library data
-const exerciseDatabase = [
-  {
-    category: "Chest",
-    exercises: [
-      {
-        name: "Bench Press", 
-        description: "Lie on a flat bench with a barbell, lower it to your chest and press it back up.",
-        muscles: "Pectoralis major, anterior deltoids, triceps",
-        tips: "Keep your feet flat on the floor, maintain a slight arch in your back, and keep your wrists straight."
-      },
-      {
-        name: "Dumbbell Fly", 
-        description: "Lie on a bench with dumbbells, extend arms out to sides in an arc motion.",
-        muscles: "Pectoralis major, anterior deltoids",
-        tips: "Maintain a slight bend in your elbows throughout the movement to reduce strain on the joints."
-      },
-      {
-        name: "Push Up", 
-        description: "Standard bodyweight exercise performed in a prone position.",
-        muscles: "Pectoralis major, anterior deltoids, triceps, core",
-        tips: "Keep your body in a straight line from head to heels, and position hands slightly wider than shoulder-width."
-      }
-    ]
-  },
-  {
-    category: "Back",
-    exercises: [
-      {
-        name: "Pull Up", 
-        description: "Hang from a bar and pull yourself up until your chin is over the bar.",
-        muscles: "Latissimus dorsi, biceps, middle trapezius, rhomboids",
-        tips: "Start from a full hang position with arms completely extended and pull your chest to the bar."
-      },
-      {
-        name: "Bent Over Row", 
-        description: "Bend at the hips, keep back straight, pull weight to your lower chest/upper abdomen.",
-        muscles: "Latissimus dorsi, rhomboids, trapezius, biceps",
-        tips: "Keep your back flat throughout the movement and avoid using momentum to lift the weight."
-      },
-      {
-        name: "Lat Pulldown", 
-        description: "Seated machine exercise, pull bar down to chest level.",
-        muscles: "Latissimus dorsi, biceps, posterior deltoids",
-        tips: "Keep your chest up and avoid leaning back excessively to use momentum."
-      }
-    ]
-  },
-  {
-    category: "Legs",
-    exercises: [
-      {
-        name: "Squat", 
-        description: "Lower your body by bending knees and hips, then return to standing position.",
-        muscles: "Quadriceps, hamstrings, glutes, lower back",
-        tips: "Keep your chest up, push your knees out in the direction of your toes, and drive through your heels."
-      },
-      {
-        name: "Deadlift", 
-        description: "Lift a barbell from the ground by extending hips and knees.",
-        muscles: "Lower back, glutes, hamstrings, traps",
-        tips: "Keep the bar close to your body throughout the movement, and maintain a neutral spine."
-      },
-      {
-        name: "Leg Press", 
-        description: "Push weight away using a leg press machine.",
-        muscles: "Quadriceps, hamstrings, glutes",
-        tips: "Don't lock your knees at the top of the movement and keep your lower back against the pad."
-      }
-    ]
-  },
-  {
-    category: "Shoulders",
-    exercises: [
-      {
-        name: "Overhead Press", 
-        description: "Press weight overhead from shoulder level until arms are fully extended.",
-        muscles: "Anterior and lateral deltoids, triceps, trapezius",
-        tips: "Keep your core tight and avoid arching your back excessively."
-      },
-      {
-        name: "Lateral Raise", 
-        description: "Lift dumbbells out to sides until parallel with floor.",
-        muscles: "Lateral deltoids",
-        tips: "Use a slight bend in the elbow and avoid using momentum to swing the weights up."
-      }
-    ]
-  },
-  {
-    category: "Arms",
-    exercises: [
-      {
-        name: "Bicep Curl", 
-        description: "Curl weight from extended arm position up toward shoulder.",
-        muscles: "Biceps brachii",
-        tips: "Keep your upper arms fixed at your sides throughout the movement."
-      },
-      {
-        name: "Tricep Extension", 
-        description: "Extend arm from bent position until straight.",
-        muscles: "Triceps brachii",
-        tips: "Keep your upper arms still and focus on moving only at the elbow joint."
-      }
-    ]
-  }
-];
+import { theme, commonStyles } from './theme';
 
 export function ExerciseLibrary({ onSelectExercise }) {
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [animatedItem, setAnimatedItem] = useState(null);
+
+  // Sample exercise library with categories
+  const exercises = [
+    { 
+      name: "Barbell Squat", 
+      category: "Legs", 
+      description: "Compound exercise that targets quadriceps, hamstrings, and glutes.",
+      muscles: ["Quadriceps", "Hamstrings", "Glutes"],
+      difficulty: "Intermediate" 
+    },
+    { 
+      name: "Bench Press", 
+      category: "Chest", 
+      description: "Compound movement that primarily works the pectorals, deltoids, and triceps.",
+      muscles: ["Chest", "Shoulders", "Triceps"],
+      difficulty: "Intermediate" 
+    },
+    { 
+      name: "Deadlift", 
+      category: "Back", 
+      description: "Full-body compound exercise focusing on posterior chain development.",
+      muscles: ["Back", "Glutes", "Hamstrings"],
+      difficulty: "Advanced" 
+    },
+    { 
+      name: "Pull-up", 
+      category: "Back", 
+      description: "Upper body compound movement utilizing bodyweight.",
+      muscles: ["Lats", "Biceps", "Forearms"],
+      difficulty: "Intermediate" 
+    },
+    { 
+      name: "Overhead Press", 
+      category: "Shoulders", 
+      description: "Compound exercise targeting the deltoids and upper body.",
+      muscles: ["Shoulders", "Triceps", "Upper Chest"],
+      difficulty: "Intermediate" 
+    },
+    { 
+      name: "Barbell Row", 
+      category: "Back", 
+      description: "Compound pulling exercise for back development.",
+      muscles: ["Upper Back", "Lats", "Biceps"],
+      difficulty: "Intermediate" 
+    },
+    { 
+      name: "Dumbbell Curl", 
+      category: "Arms", 
+      description: "Isolation exercise for biceps development.",
+      muscles: ["Biceps", "Forearms"],
+      difficulty: "Beginner" 
+    },
+    { 
+      name: "Tricep Pushdown", 
+      category: "Arms", 
+      description: "Isolation exercise for triceps development.",
+      muscles: ["Triceps"],
+      difficulty: "Beginner" 
+    },
+    { 
+      name: "Leg Press", 
+      category: "Legs", 
+      description: "Machine compound exercise for lower body development.",
+      muscles: ["Quadriceps", "Hamstrings", "Glutes"],
+      difficulty: "Beginner" 
+    },
+    { 
+      name: "Lateral Raise", 
+      category: "Shoulders", 
+      description: "Isolation exercise targeting the lateral deltoids.",
+      muscles: ["Side Deltoids"],
+      difficulty: "Beginner" 
+    },
+  ];
   
-  const filteredExercises = selectedCategory === "All"
-    ? exerciseDatabase.flatMap(category => category.exercises)
-    : exerciseDatabase.find(c => c.category === selectedCategory)?.exercises || [];
+  // Get unique categories
+  const categories = ["All", ...new Set(exercises.map(ex => ex.category))];
   
-  const searchResults = searchQuery
-    ? filteredExercises.filter(ex => 
-        ex.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ex.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ex.muscles.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : filteredExercises;
+  // Filter exercises based on search and category
+  const filteredExercises = exercises.filter(ex => {
+    return (
+      (selectedCategory === "All" || ex.category === selectedCategory) &&
+      ex.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
+
+  const containerStyle = {
+    backgroundColor: theme.colors.background.accent,
+    borderRadius: theme.borderRadius.medium,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    boxShadow: theme.shadows.medium,
+    transition: theme.transitions.medium,
+  };
+
+  const headingStyle = {
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.heading.h3,
+    marginBottom: theme.spacing.md,
+    position: "relative",
+    paddingLeft: theme.spacing.md,
+    display: "flex",
+    alignItems: "center",
+  };
+
+  const headingAccentStyle = {
+    width: "3px",
+    height: "20px",
+    backgroundColor: theme.colors.accent.primary,
+    position: "absolute",
+    left: "0",
+    borderRadius: theme.borderRadius.small,
+  };
+
+  const searchStyle = {
+    width: "100%",
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    borderRadius: theme.borderRadius.small,
+    border: theme.components.input.border,
+    backgroundColor: theme.components.input.background,
+    color: theme.components.input.color,
+    transition: theme.transitions.fast,
+    outline: 'none',
+    '&:focus': {
+      borderColor: theme.colors.accent.primary,
+      boxShadow: `0 0 0 2px ${theme.colors.accent.primaryTransparent}`,
+    }
+  };
+
+  const categoryContainerStyle = {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  };
+
+  const categoryButtonStyle = (isSelected) => ({
+    padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+    borderRadius: theme.borderRadius.small,
+    backgroundColor: isSelected ? theme.colors.accent.primary : "transparent",
+    color: isSelected ? theme.colors.background.primary : theme.colors.accent.primary,
+    border: `1px solid ${theme.colors.accent.primary}`,
+    cursor: "pointer",
+    transition: theme.transitions.fast,
+    transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+  });
+
+  const exerciseCardStyle = (isHovered, isAnimated) => ({
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: theme.borderRadius.small,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    border: `1px solid ${isHovered || isAnimated ? theme.colors.accent.primary : theme.colors.background.accent}`,
+    cursor: "pointer",
+    transition: theme.transitions.fast,
+    position: "relative",
+    overflow: "hidden",
+    transform: isHovered || isAnimated ? "translateY(-2px)" : "translateY(0)",
+    boxShadow: isHovered || isAnimated ? theme.shadows.medium : theme.shadows.small,
+    opacity: isAnimated ? '0.9' : '1',
+  });
+
+  const exerciseNameStyle = {
+    color: theme.colors.text.primary,
+    margin: "0 0 5px 0",
+    fontWeight: 600,
+  };
+
+  const categoryBadgeStyle = {
+    display: "inline-block",
+    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+    backgroundColor: theme.colors.accent.primary,
+    color: theme.colors.background.primary,
+    borderRadius: theme.borderRadius.small,
+    fontSize: "12px",
+    marginRight: theme.spacing.sm,
+  };
+
+  const difficultyBadgeStyle = (difficulty) => {
+    let bgColor;
+    switch(difficulty) {
+      case "Beginner":
+        bgColor = theme.colors.success;
+        break;
+      case "Intermediate":
+        bgColor = theme.colors.warning;
+        break;
+      case "Advanced":
+        bgColor = theme.colors.error;
+        break;
+      default:
+        bgColor = theme.colors.accent.primary;
+    }
+    
+    return {
+      display: "inline-block",
+      padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+      backgroundColor: bgColor,
+      color: theme.colors.background.primary,
+      borderRadius: theme.borderRadius.small,
+      fontSize: "12px",
+    };
+  };
+
+  const muscleTagStyle = {
+    display: "inline-block",
+    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+    backgroundColor: theme.colors.background.accent,
+    color: theme.colors.text.secondary,
+    borderRadius: theme.borderRadius.small,
+    fontSize: "12px",
+    margin: "0 5px 5px 0",
+  };
+
+  const descriptionStyle = {
+    color: theme.colors.text.secondary,
+    fontSize: "14px",
+    marginTop: theme.spacing.sm,
+    marginBottom: 0,
+  };
+
+  const selectButtonStyle = {
+    padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+    backgroundColor: theme.colors.accent.primary,
+    color: theme.colors.background.primary,
+    border: "none",
+    borderRadius: theme.borderRadius.small,
+    cursor: "pointer",
+    marginTop: theme.spacing.sm,
+    fontSize: "14px",
+    transition: theme.transitions.fast,
+    '&:focus': {
+      outline: `2px solid ${theme.colors.accent.secondary}`,
+      outlineOffset: '2px'
+    }
+  };
+
+  const handleExerciseSelection = (exercise) => {
+    setAnimatedItem(exercise.name);
+    setTimeout(() => {
+      onSelectExercise(exercise.name);
+      setAnimatedItem(null);
+    }, 300);
+  };
 
   return (
-    <div style={{ marginBottom: "30px" }}>
-      <h3>Exercise Library</h3>
-      
-      <div style={{ marginBottom: "20px" }}>
-        <input
-          type="text"
-          placeholder="Search exercises..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ padding: "8px", width: "100%", marginBottom: "10px", borderRadius: "4px", border: "1px solid #ccc" }}
-        />
-        
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-          <button 
-            onClick={() => setSelectedCategory("All")}
-            style={{ 
-              padding: "5px 10px", 
-              backgroundColor: selectedCategory === "All" ? "#2196F3" : "#e0e0e0",
-              color: selectedCategory === "All" ? "white" : "black",
-              border: "none", 
-              borderRadius: "4px",
-              cursor: "pointer"
-            }}
-          >
-            All
-          </button>
-          
-          {exerciseDatabase.map(category => (
-            <button 
-              key={category.category}
-              onClick={() => setSelectedCategory(category.category)}
-              style={{ 
-                padding: "5px 10px", 
-                backgroundColor: selectedCategory === category.category ? "#2196F3" : "#e0e0e0",
-                color: selectedCategory === category.category ? "white" : "black",
-                border: "none", 
-                borderRadius: "4px",
-                cursor: "pointer"
-              }}
-            >
-              {category.category}
-            </button>
-          ))}
-        </div>
+    <div style={containerStyle}>
+      <div style={headingStyle}>
+        <div style={headingAccentStyle}></div>
+        <h3>Exercise Library</h3>
       </div>
       
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px" }}>
-        {searchResults.map((exercise, index) => (
-          <div 
-            key={index} 
-            style={{ 
-              border: "1px solid #ddd", 
-              borderRadius: "8px", 
-              padding: "15px",
-              backgroundColor: "#f9f9f9" 
-            }}
+      <input 
+        type="text"
+        placeholder="Search exercises..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        style={searchStyle}
+        aria-label="Search exercises"
+      />
+      
+      <div style={categoryContainerStyle} role="tablist" aria-label="Exercise categories">
+        {categories.map(cat => (
+          <button 
+            key={cat}
+            onClick={() => setSelectedCategory(cat)}
+            style={categoryButtonStyle(selectedCategory === cat)}
+            role="tab"
+            aria-selected={selectedCategory === cat}
+            aria-controls="exercise-list"
           >
-            <h4 style={{ marginTop: 0 }}>{exercise.name}</h4>
-            <p><strong>Description:</strong> {exercise.description}</p>
-            <p><strong>Muscles worked:</strong> {exercise.muscles}</p>
-            <p><strong>Tips:</strong> {exercise.tips}</p>
-            {onSelectExercise && (
-              <button 
-                onClick={() => onSelectExercise(exercise.name)}
-                style={{ 
-                  padding: "8px 16px", 
-                  backgroundColor: "#4CAF50", 
-                  color: "white", 
-                  border: "none", 
-                  borderRadius: "4px",
-                  cursor: "pointer"
-                }}
-              >
-                Use This Exercise
-              </button>
-            )}
-          </div>
+            {cat}
+          </button>
         ))}
       </div>
       
-      {searchResults.length === 0 && (
-        <p>No exercises found. Try a different search term or category.</p>
-      )}
+      <div id="exercise-list" role="tabpanel">
+        {filteredExercises.map(exercise => {
+          const [isHovered, setIsHovered] = useState(false);
+          const isAnimated = animatedItem === exercise.name;
+          
+          return (
+            <div 
+              key={exercise.name} 
+              style={exerciseCardStyle(isHovered, isAnimated)}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              tabIndex="0"
+              role="button"
+              aria-pressed="false"
+            >
+              <h4 style={exerciseNameStyle}>{exercise.name}</h4>
+              <div style={{ marginBottom: theme.spacing.sm }}>
+                <span style={categoryBadgeStyle}>{exercise.category}</span>
+                <span style={difficultyBadgeStyle(exercise.difficulty)}>{exercise.difficulty}</span>
+              </div>
+              <div style={{ marginBottom: theme.spacing.sm }}>
+                {exercise.muscles.map(muscle => (
+                  <span key={muscle} style={muscleTagStyle}>{muscle}</span>
+                ))}
+              </div>
+              <p style={descriptionStyle}>{exercise.description}</p>
+              <button 
+                onClick={() => handleExerciseSelection(exercise)} 
+                style={{
+                  ...selectButtonStyle,
+                  transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+                  transition: theme.transitions.fast
+                }}
+                aria-label={`Select ${exercise.name}`}
+              >
+                Select Exercise
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
 export function RestTimer() {
-  const [seconds, setSeconds] = useState(60);
+  const [remainingTime, setRemainingTime] = useState(60);
+  const [initialTime, setInitialTime] = useState(60);
   const [isActive, setIsActive] = useState(false);
-  const [presets] = useState([30, 60, 90, 120, 180]);
-  const intervalRef = useRef(null);
-  const [showNotification, setShowNotification] = useState(false);
-  
+  const [customTime, setCustomTime] = useState("");
+  const [showAnimation, setShowAnimation] = useState(false);
+
+  // Calculate progress percentage for the circular timer
+  const progress = (remainingTime / initialTime) * 100;
+
   useEffect(() => {
-    if (isActive) {
-      intervalRef.current = setInterval(() => {
-        setSeconds(prevSeconds => {
-          if (prevSeconds <= 1) {
-            clearInterval(intervalRef.current);
-            setIsActive(false);
-            setShowNotification(true);
-            setTimeout(() => setShowNotification(false), 5000);
-            return 0;
-          }
-          return prevSeconds - 1;
-        });
+    let timer;
+    if (isActive && remainingTime > 0) {
+      timer = setInterval(() => {
+        setRemainingTime((prev) => prev - 1);
       }, 1000);
-    } else if (!isActive && seconds !== 0) {
-      clearInterval(intervalRef.current);
+    } else if (isActive && remainingTime === 0) {
+      setIsActive(false);
+      setShowAnimation(true);
+      // Reset animation after a delay
+      setTimeout(() => {
+        setShowAnimation(false);
+      }, 2000);
     }
-    
-    return () => clearInterval(intervalRef.current);
-  }, [isActive]);
-  
+    return () => clearInterval(timer);
+  }, [isActive, remainingTime]);
+
   const handleStart = () => {
-    if (seconds > 0) {
-      setIsActive(true);
-    }
+    setIsActive(true);
   };
-  
+
   const handlePause = () => {
     setIsActive(false);
   };
-  
+
   const handleReset = () => {
     setIsActive(false);
-    setSeconds(60);
+    setRemainingTime(initialTime);
   };
-  
-  const setTime = (time) => {
+
+  const handlePresetSelect = (seconds) => {
     setIsActive(false);
-    setSeconds(time);
+    setRemainingTime(seconds);
+    setInitialTime(seconds);
   };
-  
-  const formatTime = (totalSeconds) => {
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+  const handleCustomTimeChange = (e) => {
+    const value = e.target.value;
+    if (/^\d*$/.test(value)) {
+      setCustomTime(value);
+    }
   };
-  
+
+  const handleCustomTimeSet = () => {
+    const time = parseInt(customTime, 10);
+    if (!isNaN(time) && time > 0) {
+      handlePresetSelect(time);
+      setCustomTime("");
+    }
+  };
+
+  // Format time to mm:ss
+  const formatTime = (timeInSeconds) => {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = timeInSeconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const containerStyle = {
+    backgroundColor: theme.colors.background.accent,
+    borderRadius: theme.borderRadius.medium,
+    padding: theme.spacing.lg,
+    boxShadow: theme.shadows.medium,
+    marginBottom: theme.spacing.lg,
+  };
+
+  const headingStyle = {
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.heading.h3,
+    marginBottom: theme.spacing.md,
+    position: "relative",
+    paddingLeft: theme.spacing.md,
+    display: "flex",
+    alignItems: "center",
+  };
+
+  const headingAccentStyle = {
+    width: "3px",
+    height: "20px",
+    backgroundColor: theme.colors.accent.primary,
+    position: "absolute",
+    left: "0",
+    borderRadius: theme.borderRadius.small,
+  };
+
+  const timerContainerStyle = {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    marginBottom: theme.spacing.lg,
+  };
+
+  const circularTimerStyle = {
+    position: "relative",
+    width: "200px",
+    height: "200px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: theme.spacing.md,
+  };
+
+  const circleBackgroundStyle = {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+    borderRadius: "50%",
+    backgroundColor: theme.colors.background.secondary,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
+
+  const progressRingStyle = {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+    borderRadius: "50%",
+    background: `conic-gradient(
+      ${theme.colors.accent.primary} ${progress}%, 
+      transparent ${progress}%
+    )`,
+    transform: "rotate(-90deg)",
+  };
+
+  const innerCircleStyle = {
+    width: "85%",
+    height: "85%",
+    borderRadius: "50%",
+    backgroundColor: theme.colors.background.primary,
+    position: "absolute",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1,
+  };
+
+  const timerDisplayStyle = {
+    fontSize: "2.5rem",
+    fontWeight: "bold",
+    color: theme.colors.text.primary,
+    zIndex: 2,
+    animation: showAnimation ? "pulse 0.5s infinite" : "none",
+  };
+
+  const buttonContainerStyle = {
+    display: "flex",
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+    width: "100%",
+    justifyContent: "center",
+  };
+
+  const buttonStyle = (type) => ({
+    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+    backgroundColor: 
+      type === "start" ? theme.colors.accent.success :
+      type === "pause" ? theme.colors.accent.warning :
+      type === "reset" ? theme.colors.accent.danger :
+      theme.colors.accent.primary,
+    color: theme.colors.text.light,
+    border: "none",
+    borderRadius: theme.borderRadius.small,
+    cursor: "pointer",
+    transition: theme.transitions.fast,
+    flex: 1,
+    maxWidth: "120px",
+    fontWeight: "bold",
+    boxShadow: theme.shadows.small,
+    ":hover": {
+      transform: "translateY(-2px)",
+      boxShadow: theme.shadows.medium,
+    },
+  });
+
+  const presetsContainerStyle = {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing.md,
+  };
+
+  const presetsHeadingStyle = {
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.text.md,
+    fontWeight: 600,
+    marginBottom: theme.spacing.sm,
+  };
+
+  const presetButtonsStyle = {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: theme.spacing.sm,
+  };
+
+  const presetButtonStyle = (selected) => ({
+    padding: theme.spacing.sm,
+    backgroundColor: selected ? theme.colors.accent.primary : theme.colors.background.secondary,
+    color: selected ? theme.colors.text.light : theme.colors.text.primary,
+    border: `1px solid ${selected ? theme.colors.accent.primary : theme.colors.background.accent}`,
+    borderRadius: theme.borderRadius.small,
+    cursor: "pointer",
+    transition: theme.transitions.fast,
+    minWidth: "60px",
+    textAlign: "center",
+  });
+
+  const customTimeContainerStyle = {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+  };
+
+  const customTimeInputStyle = {
+    padding: theme.spacing.sm,
+    backgroundColor: theme.colors.background.secondary,
+    color: theme.colors.text.primary,
+    border: `1px solid ${theme.colors.background.accent}`,
+    borderRadius: theme.borderRadius.small,
+    width: "80px",
+    textAlign: "center",
+  };
+
+  const customTimeButtonStyle = {
+    padding: theme.spacing.sm,
+    backgroundColor: theme.colors.accent.primary,
+    color: theme.colors.text.light,
+    border: "none",
+    borderRadius: theme.borderRadius.small,
+    cursor: "pointer",
+    transition: theme.transitions.fast,
+  };
+
+  // Create CSS keyframes for pulse animation
+  const style = document.createElement('style');
+  if (!document.head.querySelector('style[data-timer-animation]')) {
+    style.setAttribute('data-timer-animation', 'true');
+    style.textContent = `
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   return (
-    <div style={{ 
-      border: "1px solid #ccc", 
-      borderRadius: "10px", 
-      padding: "20px", 
-      marginBottom: "20px",
-      backgroundColor: isActive ? "#e8f5e9" : "#f9f9f9",
-      position: "relative"
-    }}>
-      {showNotification && (
-        <div style={{ 
-          position: "absolute", 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          backgroundColor: "#4CAF50", 
-          color: "white", 
-          padding: "10px", 
-          borderRadius: "10px 10px 0 0", 
-          textAlign: "center",
-          animation: "fadeIn 0.5s"
-        }}>
-          Time's up! Rest complete.
+    <div style={containerStyle}>
+      <div style={headingStyle}>
+        <div style={headingAccentStyle}></div>
+        <h3>Rest Timer</h3>
+      </div>
+      
+      <div style={timerContainerStyle}>
+        <div style={circularTimerStyle}>
+          <div style={progressRingStyle}></div>
+          <div style={circleBackgroundStyle}></div>
+          <div style={innerCircleStyle}>
+            <div style={timerDisplayStyle}>{formatTime(remainingTime)}</div>
+          </div>
         </div>
-      )}
-      
-      <h3>Rest Timer</h3>
-      
-      <div style={{ fontSize: "3rem", textAlign: "center", margin: "20px 0" }}>
-        {formatTime(seconds)}
-      </div>
-      
-      <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "20px" }}>
-        {!isActive ? (
-          <button 
-            onClick={handleStart}
-            style={{ padding: "10px 20px", backgroundColor: "#4CAF50", color: "white", border: "none", borderRadius: "4px" }}
-          >
-            Start
-          </button>
-        ) : (
-          <button 
-            onClick={handlePause}
-            style={{ padding: "10px 20px", backgroundColor: "#f44336", color: "white", border: "none", borderRadius: "4px" }}
-          >
-            Pause
-          </button>
-        )}
-        <button 
-          onClick={handleReset}
-          style={{ padding: "10px 20px", backgroundColor: "#2196F3", color: "white", border: "none", borderRadius: "4px" }}
-        >
-          Reset
-        </button>
-      </div>
-      
-      <div style={{ marginTop: "10px" }}>
-        <p style={{ marginBottom: "10px" }}>Presets:</p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-          {presets.map((preset) => (
-            <button 
-              key={preset}
-              onClick={() => setTime(preset)}
-              style={{ 
-                padding: "8px 12px", 
-                backgroundColor: seconds === preset ? "#bbdefb" : "#e0e0e0", 
-                border: "none", 
-                borderRadius: "4px" 
-              }}
+        
+        <div style={buttonContainerStyle}>
+          {!isActive ? (
+            <button
+              style={buttonStyle("start")}
+              onClick={handleStart}
+              aria-label="Start timer"
+              disabled={remainingTime === 0}
             >
-              {formatTime(preset)}
+              Start
             </button>
-          ))}
+          ) : (
+            <button
+              style={buttonStyle("pause")}
+              onClick={handlePause}
+              aria-label="Pause timer"
+            >
+              Pause
+            </button>
+          )}
+          <button 
+            style={buttonStyle("reset")}
+            onClick={handleReset}
+            aria-label="Reset timer"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+      
+      <div style={presetsContainerStyle}>
+        <h4 style={presetsHeadingStyle}>Presets</h4>
+        <div style={presetButtonsStyle}>
+          <button
+            style={presetButtonStyle(initialTime === 30)}
+            onClick={() => handlePresetSelect(30)}
+            aria-label="Set timer to 30 seconds"
+          >
+            30s
+          </button>
+          <button
+            style={presetButtonStyle(initialTime === 60)}
+            onClick={() => handlePresetSelect(60)}
+            aria-label="Set timer to 60 seconds"
+          >
+            1min
+          </button>
+          <button
+            style={presetButtonStyle(initialTime === 90)}
+            onClick={() => handlePresetSelect(90)}
+            aria-label="Set timer to 90 seconds"
+          >
+            1:30
+          </button>
+          <button
+            style={presetButtonStyle(initialTime === 120)}
+            onClick={() => handlePresetSelect(120)}
+            aria-label="Set timer to 2 minutes"
+          >
+            2min
+          </button>
+          <button
+            style={presetButtonStyle(initialTime === 180)}
+            onClick={() => handlePresetSelect(180)}
+            aria-label="Set timer to 3 minutes"
+          >
+            3min
+          </button>
+        </div>
+        
+        <div style={customTimeContainerStyle}>
+          <input
+            type="text"
+            placeholder="Seconds"
+            value={customTime}
+            onChange={handleCustomTimeChange}
+            style={customTimeInputStyle}
+            aria-label="Custom time in seconds"
+          />
+          <button
+            style={customTimeButtonStyle}
+            onClick={handleCustomTimeSet}
+            aria-label="Set custom time"
+          >
+            Set
+          </button>
         </div>
       </div>
     </div>
@@ -345,94 +692,213 @@ export function RestTimer() {
 }
 
 export function WorkoutTemplates({ onSelectTemplate }) {
+  const [hoveredTemplate, setHoveredTemplate] = useState(null);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  
   const templates = [
     {
-      name: "Push Workout (Chest, Shoulders, Triceps)",
+      name: "Upper Body Strength",
+      description: "Focus on building strength in chest, shoulders, back and arms",
       exercises: [
-        { name: "Bench Press", sets: 4, reps: "8-10" },
-        { name: "Overhead Press", sets: 3, reps: "8-12" },
-        { name: "Incline Dumbbell Press", sets: 3, reps: "10-12" },
-        { name: "Lateral Raises", sets: 3, reps: "12-15" },
-        { name: "Tricep Pushdowns", sets: 3, reps: "12-15" },
-        { name: "Overhead Tricep Extension", sets: 3, reps: "12-15" }
+        { name: "Bench Press", sets: 4, reps: 6 },
+        { name: "Overhead Press", sets: 4, reps: 6 },
+        { name: "Barbell Row", sets: 4, reps: 8 },
+        { name: "Pull-ups", sets: 3, reps: 8 },
+        { name: "Dumbbell Curl", sets: 3, reps: 10 },
+        { name: "Tricep Pushdown", sets: 3, reps: 10 }
       ]
     },
     {
-      name: "Pull Workout (Back, Biceps)",
+      name: "Lower Body Strength",
+      description: "Focus on building leg and posterior chain strength",
       exercises: [
-        { name: "Pull Ups", sets: 4, reps: "max" },
-        { name: "Bent Over Row", sets: 4, reps: "8-10" },
-        { name: "Lat Pulldown", sets: 3, reps: "10-12" },
-        { name: "Face Pulls", sets: 3, reps: "12-15" },
-        { name: "Bicep Curls", sets: 3, reps: "12-15" },
-        { name: "Hammer Curls", sets: 3, reps: "12-15" }
-      ]
-    },
-    {
-      name: "Leg Workout",
-      exercises: [
-        { name: "Squat", sets: 4, reps: "6-10" },
-        { name: "Romanian Deadlift", sets: 3, reps: "8-10" },
-        { name: "Leg Press", sets: 3, reps: "10-12" },
-        { name: "Walking Lunges", sets: 3, reps: "12 each leg" },
-        { name: "Leg Extensions", sets: 3, reps: "12-15" },
-        { name: "Leg Curls", sets: 3, reps: "12-15" },
-        { name: "Calf Raises", sets: 4, reps: "15-20" }
+        { name: "Barbell Squat", sets: 4, reps: 6 },
+        { name: "Deadlift", sets: 4, reps: 5 },
+        { name: "Leg Press", sets: 3, reps: 10 },
+        { name: "Leg Curl", sets: 3, reps: 10 },
+        { name: "Standing Calf Raise", sets: 4, reps: 15 }
       ]
     },
     {
       name: "Full Body Workout",
+      description: "Complete workout targeting all major muscle groups",
       exercises: [
-        { name: "Squat", sets: 3, reps: "8-10" },
-        { name: "Bench Press", sets: 3, reps: "8-10" },
-        { name: "Bent Over Row", sets: 3, reps: "8-10" },
-        { name: "Overhead Press", sets: 3, reps: "8-12" },
-        { name: "Leg Press", sets: 3, reps: "10-12" },
-        { name: "Lat Pulldown", sets: 3, reps: "10-12" },
-        { name: "Bicep Curls", sets: 2, reps: "12-15" },
-        { name: "Tricep Pushdown", sets: 2, reps: "12-15" }
+        { name: "Barbell Squat", sets: 3, reps: 8 },
+        { name: "Bench Press", sets: 3, reps: 8 },
+        { name: "Deadlift", sets: 3, reps: 6 },
+        { name: "Pull-ups", sets: 3, reps: 8 },
+        { name: "Overhead Press", sets: 3, reps: 8 },
+        { name: "Dumbbell Curl", sets: 2, reps: 10 }
+      ]
+    },
+    {
+      name: "Upper Body Hypertrophy",
+      description: "Focus on muscle growth for upper body",
+      exercises: [
+        { name: "Incline Bench Press", sets: 4, reps: 10 },
+        { name: "Lat Pulldown", sets: 4, reps: 10 },
+        { name: "Dumbbell Shoulder Press", sets: 3, reps: 12 },
+        { name: "Cable Rows", sets: 3, reps: 12 },
+        { name: "Lateral Raise", sets: 3, reps: 15 },
+        { name: "EZ Bar Curl", sets: 3, reps: 12 },
+        { name: "Rope Pushdown", sets: 3, reps: 12 }
       ]
     }
   ];
 
+  const containerStyle = {
+    backgroundColor: theme.colors.background.accent,
+    borderRadius: theme.borderRadius.medium,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    boxShadow: theme.shadows.medium,
+  };
+
+  const headingStyle = {
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.heading.h3,
+    marginBottom: theme.spacing.md,
+    position: "relative",
+    paddingLeft: theme.spacing.md,
+    display: "flex",
+    alignItems: "center",
+  };
+
+  const headingAccentStyle = {
+    width: "3px",
+    height: "20px",
+    backgroundColor: theme.colors.accent.primary,
+    position: "absolute",
+    left: "0",
+    borderRadius: theme.borderRadius.small,
+  };
+
+  const templateCardStyle = (isHovered, isSelected) => ({
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: theme.borderRadius.medium,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    boxShadow: isHovered || isSelected ? theme.shadows.medium : theme.shadows.small,
+    border: `1px solid ${isHovered || isSelected ? theme.colors.accent.primary : theme.colors.background.accent}`,
+    transform: isHovered ? 'translateY(-3px)' : 'translateY(0)',
+    transition: `all ${theme.transitions.medium}`,
+    position: 'relative',
+    overflow: 'hidden',
+  });
+
+  const templateTitleStyle = {
+    color: theme.colors.text.primary,
+    fontWeight: 600,
+    margin: "0 0 5px 0",
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  };
+
+  const templateDescStyle = {
+    color: theme.colors.text.secondary,
+    fontSize: "14px",
+    marginBottom: theme.spacing.sm,
+  };
+
+  const exerciseListStyle = {
+    listStyleType: "none",
+    padding: 0,
+    margin: 0,
+  };
+
+  const exerciseItemStyle = {
+    padding: `${theme.spacing.xs} 0`,
+    borderBottom: `1px solid ${theme.colors.background.accent}`,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    color: theme.colors.text.secondary,
+    fontSize: "14px",
+  };
+  
+  const buttonStyle = (isHovered) => ({
+    width: "100%",
+    padding: theme.spacing.sm,
+    backgroundColor: isHovered ? theme.colors.accent.secondary : theme.colors.accent.primary,
+    color: theme.colors.background.primary,
+    border: "none",
+    borderRadius: theme.borderRadius.small,
+    cursor: "pointer",
+    marginTop: theme.spacing.md,
+    fontWeight: 500,
+    transition: theme.transitions.fast,
+    transform: isHovered ? 'scale(1.02)' : 'scale(1)',
+  });
+
+  const templateBadgeStyle = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.accent.primaryTransparent,
+    color: theme.colors.accent.primary,
+    borderRadius: '50%',
+    width: '24px',
+    height: '24px',
+    fontSize: '12px',
+    fontWeight: 'bold',
+  };
+
+  // Handle selecting a template
+  const handleTemplateSelect = (template) => {
+    setSelectedTemplate(template.name);
+    // Add a small delay to show the selection animation
+    setTimeout(() => {
+      onSelectTemplate && onSelectTemplate(template);
+    }, 300);
+  };
+
   return (
-    <div style={{ marginBottom: "30px" }}>
-      <h3>Workout Templates</h3>
+    <div style={containerStyle}>
+      <div style={headingStyle}>
+        <div style={headingAccentStyle}></div>
+        <h3>Workout Templates</h3>
+      </div>
       
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px" }}>
-        {templates.map((template, index) => (
-          <div 
-            key={index} 
-            style={{ 
-              border: "1px solid #ddd", 
-              borderRadius: "8px", 
-              padding: "15px",
-              backgroundColor: "#f9f9f9" 
-            }}
-          >
-            <h4 style={{ marginTop: 0 }}>{template.name}</h4>
-            <ul style={{ paddingLeft: "20px" }}>
-              {template.exercises.map((ex, i) => (
-                <li key={i}>{ex.name}: {ex.sets} sets × {ex.reps} reps</li>
-              ))}
-            </ul>
-            {onSelectTemplate && (
+      <div role="list" aria-label="Workout templates">
+        {templates.map((template, index) => {
+          const isHovered = hoveredTemplate === template.name;
+          const isSelected = selectedTemplate === template.name;
+          
+          return (
+            <div 
+              key={template.name} 
+              style={templateCardStyle(isHovered, isSelected)}
+              onMouseEnter={() => setHoveredTemplate(template.name)}
+              onMouseLeave={() => setHoveredTemplate(null)}
+              role="listitem"
+              tabIndex="0"
+            >
+              <h4 style={templateTitleStyle}>
+                <span style={templateBadgeStyle}>{index + 1}</span>
+                {template.name}
+              </h4>
+              <p style={templateDescStyle}>{template.description}</p>
+              
+              <ul style={exerciseListStyle}>
+                {template.exercises.map((exercise) => (
+                  <li key={`${template.name}-${exercise.name}`} style={exerciseItemStyle}>
+                    <span>{exercise.name}</span>
+                    <span>{exercise.sets} sets × {exercise.reps} reps</span>
+                  </li>
+                ))}
+              </ul>
+              
               <button 
-                onClick={() => onSelectTemplate(template)}
-                style={{ 
-                  padding: "8px 16px", 
-                  backgroundColor: "#4CAF50", 
-                  color: "white", 
-                  border: "none", 
-                  borderRadius: "4px",
-                  cursor: "pointer"
-                }}
+                style={buttonStyle(isHovered)}
+                onClick={() => handleTemplateSelect(template)}
+                aria-label={`Use ${template.name} template`}
               >
                 Use This Template
               </button>
-            )}
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

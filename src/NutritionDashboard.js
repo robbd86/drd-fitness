@@ -2,17 +2,17 @@ import React, { useState, useEffect } from "react";
 import { theme, commonStyles } from "./theme";
 
 function getWeeklyAverage(nutrition) {
-  if (!nutrition.length) return null;
+  if (!nutrition || !Array.isArray(nutrition) || !nutrition.length) return null;
 
   const totals = nutrition.reduce(
     (acc, entry) => {
-      acc.calories += entry.calories;
-      acc.protein += entry.protein;
-      acc.carbs += entry.carbs;
-      acc.fats += entry.fats;
+      acc.calories += entry.calories || 0;
+      acc.protein += entry.protein || 0;
+      acc.carbs += entry.carbs || 0;
+      acc.fat += entry.fat || 0;
       return acc;
     },
-    { calories: 0, protein: 0, carbs: 0, fats: 0 }
+    { calories: 0, protein: 0, carbs: 0, fat: 0 }
   );
 
   const count = nutrition.length;
@@ -20,11 +20,16 @@ function getWeeklyAverage(nutrition) {
     calories: Math.round(totals.calories / count),
     protein: Math.round(totals.protein / count),
     carbs: Math.round(totals.carbs / count),
-    fats: Math.round(totals.fats / count),
+    fat: Math.round(totals.fat / count),
   };
 }
 
 function SummaryCard({ weeklyAvg, targets }) {
+  // If weeklyAvg is null or not an object, show a loading message
+  if (!weeklyAvg || typeof weeklyAvg !== 'object') {
+    return <div>Loading nutrition data...</div>;
+  }
+
   const highlight = (actual, target) => {
     if (!target) return theme.colors.text.primary;
     return actual >= target ? theme.colors.success : theme.colors.error;
@@ -96,30 +101,30 @@ function SummaryCard({ weeklyAvg, targets }) {
       }}>
         <div style={statCardStyle}>
           <p style={statLabelStyle}>Calories</p>
-          <p style={{...statNumberStyle, color: highlight(weeklyAvg.calories, targets.calories)}}>{weeklyAvg.calories}</p>
-          <p style={targetStyle}>Target: {targets.calories}</p>
+          <p style={{...statNumberStyle, color: highlight(weeklyAvg?.calories || 0, targets?.calories)}}>{weeklyAvg?.calories || 0}</p>
+          <p style={targetStyle}>Target: {targets?.calories || 'N/A'}</p>
         </div>
         <div style={statCardStyle}>
           <p style={statLabelStyle}>Protein</p>
-          <p style={{...statNumberStyle, color: highlight(weeklyAvg.protein, targets.protein)}}>{weeklyAvg.protein}g</p>
-          <p style={targetStyle}>Target: {targets.protein}g</p>
+          <p style={{...statNumberStyle, color: highlight(weeklyAvg?.protein || 0, targets?.protein)}}>{weeklyAvg?.protein || 0}g</p>
+          <p style={targetStyle}>Target: {targets?.protein || 'N/A'}g</p>
         </div>
         <div style={statCardStyle}>
           <p style={statLabelStyle}>Carbs</p>
-          <p style={{...statNumberStyle, color: highlight(weeklyAvg.carbs, targets.carbs)}}>{weeklyAvg.carbs}g</p>
-          <p style={targetStyle}>Target: {targets.carbs}g</p>
+          <p style={{...statNumberStyle, color: highlight(weeklyAvg?.carbs || 0, targets?.carbs)}}>{weeklyAvg?.carbs || 0}g</p>
+          <p style={targetStyle}>Target: {targets?.carbs || 'N/A'}g</p>
         </div>
         <div style={statCardStyle}>
-          <p style={statLabelStyle}>Fats</p>
-          <p style={{...statNumberStyle, color: highlight(weeklyAvg.fats, targets.fats)}}>{weeklyAvg.fats}g</p>
-          <p style={targetStyle}>Target: {targets.fats}g</p>
+          <p style={statLabelStyle}>Fat</p>
+          <p style={{...statNumberStyle, color: highlight(weeklyAvg?.fat || 0, targets?.fat)}}>{weeklyAvg?.fat || 0}g</p>
+          <p style={targetStyle}>Target: {targets?.fat || 'N/A'}g</p>
         </div>
       </div>
     </div>
   );
 }
 
-export default function NutritionDashboard({ nutrition, targets = { calories: 2500, protein: 180, carbs: 300, fats: 70 } }) {
+export default function NutritionDashboard({ nutrition, targets = { calories: 2500, protein: 180, carbs: 300, fat: 70 } }) {
   const [weeklyAvg, setWeeklyAvg] = useState(null);
 
   useEffect(() => {

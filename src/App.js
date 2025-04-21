@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import { theme } from './theme';
 import UserProfile from './UserProfile';
-import WorkoutFeatures, { ExerciseLibrary, RestTimer, WorkoutTemplates } from './WorkoutFeatures';
+import { ExerciseLibrary, RestTimer, WorkoutTemplates } from './WorkoutFeatures';
 import NutritionDashboard from './NutritionDashboard';
 import WaterTracker from './WaterTracker';
 import Achievements from './Achievements';
+import Authentication, { validateToken } from './Authentication';
 
 // Sample data that would normally come from an API/database
 const mockData = {
@@ -66,7 +66,45 @@ const mockData = {
 };
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userData, setUserData] = useState(null);
   const [activeTab, setActiveTab] = useState('profile');
+  // Store profile and other data in state so they can be updated
+  const [profileData, setProfileData] = useState(mockData.profile);
+  const [weightEntries, setWeightEntries] = useState(mockData.weightEntries);
+  const [workouts, setWorkouts] = useState(mockData.workouts);
+  const [nutrition, setNutrition] = useState(mockData.nutrition);
+  const [waterLogs, setWaterLogs] = useState(mockData.waterLogs);
+
+  // Check authentication on component mount
+  useEffect(() => {
+    const token = validateToken();
+    if (token) {
+      setIsAuthenticated(true);
+      setUserData({ id: token.id, email: token.email });
+      // In a real app, you would fetch user data from an API using the token
+    }
+  }, []);
+
+  // Handle successful authentication
+  const handleAuthenticated = (user) => {
+    setIsAuthenticated(true);
+    setUserData(user);
+    // You would typically fetch real user data here
+  };
+
+  // Handle logout
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    setIsAuthenticated(false);
+    setUserData(null);
+  };
+
+  // Function to update profile data
+  const handleUpdateProfile = (updatedProfile) => {
+    setProfileData(updatedProfile);
+    console.log('Profile updated:', updatedProfile);
+  };
   
   // App-level styles according to the new dark theme
   const appStyle = {
@@ -134,6 +172,33 @@ function App() {
     borderRadius: theme.borderRadius.medium,
     boxShadow: theme.shadows.medium,
   };
+
+  const logoutButtonStyle = {
+    marginLeft: 'auto',
+    backgroundColor: theme.colors.error,
+    color: '#fff',
+    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+    borderRadius: theme.borderRadius.pill,
+    border: 'none',
+    cursor: 'pointer',
+  };
+  
+  // If not authenticated, show the Authentication component
+  if (!isAuthenticated) {
+    return (
+      <div style={appStyle}>
+        <div style={mainContainerStyle}>
+          <header style={headerStyle}>
+            <h1 style={logoStyle}>DRD Fitness</h1>
+            <p style={subheadingStyle}>Track your progress. Achieve your goals.</p>
+          </header>
+          <main style={contentStyle}>
+            <Authentication onAuthenticated={handleAuthenticated} />
+          </main>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div style={appStyle}>
@@ -142,43 +207,51 @@ function App() {
           <h1 style={logoStyle}>DRD Fitness</h1>
           <p style={subheadingStyle}>Track your progress. Achieve your goals.</p>
           
-          <nav style={navStyle}>
-            <button 
-              onClick={() => setActiveTab('profile')} 
-              style={navItemStyle(activeTab === 'profile')}
-            >
-              Profile
-            </button>
-            <button 
-              onClick={() => setActiveTab('workouts')} 
-              style={navItemStyle(activeTab === 'workouts')}
-            >
-              Workouts
-            </button>
-            <button 
-              onClick={() => setActiveTab('nutrition')} 
-              style={navItemStyle(activeTab === 'nutrition')}
-            >
-              Nutrition
-            </button>
-            <button 
-              onClick={() => setActiveTab('water')} 
-              style={navItemStyle(activeTab === 'water')}
-            >
-              Water Tracker
-            </button>
-            <button 
-              onClick={() => setActiveTab('achievements')} 
-              style={navItemStyle(activeTab === 'achievements')}
-            >
-              Progress & Achievements
-            </button>
-          </nav>
+          <div style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
+            <nav style={{ ...navStyle, flex: 1 }}>
+              <button 
+                onClick={() => setActiveTab('profile')} 
+                style={navItemStyle(activeTab === 'profile')}
+              >
+                Profile
+              </button>
+              <button 
+                onClick={() => setActiveTab('workouts')} 
+                style={navItemStyle(activeTab === 'workouts')}
+              >
+                Workouts
+              </button>
+              <button 
+                onClick={() => setActiveTab('nutrition')} 
+                style={navItemStyle(activeTab === 'nutrition')}
+              >
+                Nutrition
+              </button>
+              <button 
+                onClick={() => setActiveTab('water')} 
+                style={navItemStyle(activeTab === 'water')}
+              >
+                Water Tracker
+              </button>
+              <button 
+                onClick={() => setActiveTab('achievements')} 
+                style={navItemStyle(activeTab === 'achievements')}
+              >
+                Progress & Achievements
+              </button>
+            </nav>
+            <button onClick={handleLogout} style={logoutButtonStyle}>Logout</button>
+          </div>
         </header>
         
         <main style={contentStyle}>
           {activeTab === 'profile' && (
-            <UserProfile profile={mockData.profile} weightEntries={mockData.weightEntries} />
+            <UserProfile 
+              profile={profileData} 
+              weightEntries={weightEntries} 
+              onUpdateProfile={handleUpdateProfile}
+              userData={userData}
+            />
           )}
           {activeTab === 'workouts' && (
             <div>
@@ -188,18 +261,18 @@ function App() {
             </div>
           )}
           {activeTab === 'nutrition' && (
-            <NutritionDashboard nutritionData={mockData.nutrition} profile={mockData.profile} />
+            <NutritionDashboard nutrition={nutrition} />
           )}
           {activeTab === 'water' && (
-            <WaterTracker waterLogs={mockData.waterLogs} />
+            <WaterTracker waterLogs={waterLogs} setWaterLogs={setWaterLogs} />
           )}
           {activeTab === 'achievements' && (
             <Achievements 
-              entries={mockData.weightEntries}
-              workouts={mockData.workouts}
-              nutrition={mockData.nutrition}
-              waterLogs={mockData.waterLogs}
-              profileData={mockData.profile}
+              entries={weightEntries}
+              workouts={workouts}
+              nutrition={nutrition}
+              waterLogs={waterLogs}
+              profileData={profileData}
             />
           )}
         </main>

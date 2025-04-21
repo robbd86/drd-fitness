@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { theme, commonStyles } from './theme';
+import { CircularProgressbar } from 'react-circular-progressbar';
+import 'react-circular-progressbar/dist/styles.css';
 
 export function ExerciseLibrary({ onSelectExercise }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [animatedItem, setAnimatedItem] = useState(null);
+  const [hoveredItem, setHoveredItem] = useState(null); // New state to track hovered item
 
   // Sample exercise library with categories
   const exercises = [
@@ -268,7 +271,7 @@ export function ExerciseLibrary({ onSelectExercise }) {
       />
       
       <div style={categoryContainerStyle} role="tablist" aria-label="Exercise categories">
-        {categories.map(cat => (
+        {Array.isArray(categories) && categories.map(cat => (
           <button 
             key={cat}
             onClick={() => setSelectedCategory(cat)}
@@ -283,16 +286,16 @@ export function ExerciseLibrary({ onSelectExercise }) {
       </div>
       
       <div id="exercise-list" role="tabpanel">
-        {filteredExercises.map(exercise => {
-          const [isHovered, setIsHovered] = useState(false);
+        {Array.isArray(filteredExercises) && filteredExercises.map(exercise => {
+          const isHovered = hoveredItem === exercise.name;
           const isAnimated = animatedItem === exercise.name;
           
           return (
             <div 
               key={exercise.name} 
               style={exerciseCardStyle(isHovered, isAnimated)}
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
+              onMouseEnter={() => setHoveredItem(exercise.name)}
+              onMouseLeave={() => setHoveredItem(null)}
               tabIndex="0"
               role="button"
               aria-pressed="false"
@@ -303,7 +306,7 @@ export function ExerciseLibrary({ onSelectExercise }) {
                 <span style={difficultyBadgeStyle(exercise.difficulty)}>{exercise.difficulty}</span>
               </div>
               <div style={{ marginBottom: theme.spacing.sm }}>
-                {exercise.muscles.map(muscle => (
+                {Array.isArray(exercise.muscles) && exercise.muscles.map(muscle => (
                   <span key={muscle} style={muscleTagStyle}>{muscle}</span>
                 ))}
               </div>
@@ -439,49 +442,6 @@ export function RestTimer() {
     marginBottom: theme.spacing.md,
   };
 
-  const circleBackgroundStyle = {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    borderRadius: "50%",
-    backgroundColor: theme.colors.background.secondary,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
-  const progressRingStyle = {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    borderRadius: "50%",
-    background: `conic-gradient(
-      ${theme.colors.accent.primary} ${progress}%, 
-      transparent ${progress}%
-    )`,
-    transform: "rotate(-90deg)",
-  };
-
-  const innerCircleStyle = {
-    width: "85%",
-    height: "85%",
-    borderRadius: "50%",
-    backgroundColor: theme.colors.background.primary,
-    position: "absolute",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1,
-  };
-
-  const timerDisplayStyle = {
-    fontSize: "2.5rem",
-    fontWeight: "bold",
-    color: theme.colors.text.primary,
-    zIndex: 2,
-    animation: showAnimation ? "pulse 0.5s infinite" : "none",
-  };
-
   const buttonContainerStyle = {
     display: "flex",
     gap: theme.spacing.sm,
@@ -570,22 +530,23 @@ export function RestTimer() {
     transition: theme.transitions.fast,
   };
 
-  // Create CSS keyframes for pulse animation
-  const style = document.createElement('style');
-  if (!document.head.querySelector('style[data-timer-animation]')) {
-    style.setAttribute('data-timer-animation', 'true');
-    style.textContent = `
-      @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-        100% { transform: scale(1); }
-      }
-    `;
-    document.head.appendChild(style);
-  }
+  // Define the animation styles
+  const pulseAnimation = showAnimation ? {
+    animation: 'pulse 0.5s infinite',
+  } : {};
 
   return (
     <div style={containerStyle}>
+      <style>
+        {`
+          @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+          }
+        `}
+      </style>
+      
       <div style={headingStyle}>
         <div style={headingAccentStyle}></div>
         <h3>Rest Timer</h3>
@@ -593,11 +554,29 @@ export function RestTimer() {
       
       <div style={timerContainerStyle}>
         <div style={circularTimerStyle}>
-          <div style={progressRingStyle}></div>
-          <div style={circleBackgroundStyle}></div>
-          <div style={innerCircleStyle}>
-            <div style={timerDisplayStyle}>{formatTime(remainingTime)}</div>
-          </div>
+          <CircularProgressbar
+            value={progress}
+            text={formatTime(remainingTime)}
+            styles={{
+              path: {
+                stroke: theme.colors.accent.primary,
+                strokeLinecap: 'round',
+                transition: 'stroke-dashoffset 0.5s ease',
+              },
+              trail: {
+                stroke: theme.colors.background.secondary,
+              },
+              text: {
+                fill: theme.colors.text.primary,
+                fontSize: '16px',
+                fontWeight: 'bold',
+                ...pulseAnimation
+              },
+              background: {
+                fill: theme.colors.background.primary,
+              },
+            }}
+          />
         </div>
         
         <div style={buttonContainerStyle}>
@@ -695,7 +674,8 @@ export function WorkoutTemplates({ onSelectTemplate }) {
   const [hoveredTemplate, setHoveredTemplate] = useState(null);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   
-  const templates = [
+  // Initialize templates with state to ensure it's always defined
+  const [templates] = useState([
     {
       name: "Upper Body Strength",
       description: "Focus on building strength in chest, shoulders, back and arms",
@@ -744,7 +724,7 @@ export function WorkoutTemplates({ onSelectTemplate }) {
         { name: "Rope Pushdown", sets: 3, reps: 12 }
       ]
     }
-  ];
+  ]);
 
   const containerStyle = {
     backgroundColor: theme.colors.background.accent,
@@ -846,11 +826,11 @@ export function WorkoutTemplates({ onSelectTemplate }) {
 
   // Handle selecting a template
   const handleTemplateSelect = (template) => {
-    setSelectedTemplate(template.name);
-    // Add a small delay to show the selection animation
-    setTimeout(() => {
-      onSelectTemplate && onSelectTemplate(template);
-    }, 300);
+    setSelectedTemplate(template);
+    // Check if onSelectTemplate exists before calling it
+    if (onSelectTemplate && typeof onSelectTemplate === 'function') {
+      onSelectTemplate(template);
+    }
   };
 
   return (
@@ -861,7 +841,7 @@ export function WorkoutTemplates({ onSelectTemplate }) {
       </div>
       
       <div role="list" aria-label="Workout templates">
-        {templates.map((template, index) => {
+        {Array.isArray(templates) && templates.length > 0 ? templates.map((template, index) => {
           const isHovered = hoveredTemplate === template.name;
           const isSelected = selectedTemplate === template.name;
           
@@ -881,7 +861,7 @@ export function WorkoutTemplates({ onSelectTemplate }) {
               <p style={templateDescStyle}>{template.description}</p>
               
               <ul style={exerciseListStyle}>
-                {template.exercises.map((exercise) => (
+                {Array.isArray(template.exercises) && template.exercises.map((exercise) => (
                   <li key={`${template.name}-${exercise.name}`} style={exerciseItemStyle}>
                     <span>{exercise.name}</span>
                     <span>{exercise.sets} sets × {exercise.reps} reps</span>
@@ -898,7 +878,9 @@ export function WorkoutTemplates({ onSelectTemplate }) {
               </button>
             </div>
           );
-        })}
+        }) : (
+          <div style={{color: theme.colors.text.secondary}}>No workout templates available</div>
+        )}
       </div>
     </div>
   );

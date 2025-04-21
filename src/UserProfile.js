@@ -3,7 +3,7 @@ import { theme, commonStyles } from './theme';
 import { Line } from 'react-chartjs-2';
 import 'chart.js/auto';
 
-export default function UserProfile({ profile, weightEntries }) {
+export default function UserProfile({ profile, weightEntries, onUpdateProfile }) {
   const [editing, setEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState({ ...profile });
   const [animateIn, setAnimateIn] = useState(false);
@@ -25,10 +25,11 @@ export default function UserProfile({ profile, weightEntries }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Here you would typically update the profile in a database
-    console.log('Updated profile:', editedProfile);
+    // Call the onUpdateProfile prop to update the profile in parent component
+    if (onUpdateProfile) {
+      onUpdateProfile(editedProfile);
+    }
     setEditing(false);
-    // We would normally update the profile prop here through a callback
   };
 
   // Calculate BMI

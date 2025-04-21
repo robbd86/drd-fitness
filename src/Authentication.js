@@ -1,6 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { theme } from './theme';
-import CryptoJS from 'crypto-js'; // We'll need to add this package
+import CryptoJS from 'crypto-js';
+
+// In a real production app, these would be environment variables
+// Add constants for security configurations to avoid hardcoding values
+const SECURITY_CONFIG = {
+  JWT_SECRET: "DRD_FITNESS_JWT_SECRET_KEY_" + new Date().getFullYear(),
+  RESET_SECRET: "DRD_FITNESS_RESET_SECRET_KEY_" + new Date().getFullYear(),
+  TOKEN_EXPIRY: {
+    STANDARD: 24 * 60 * 60 * 1000, // 24 hours
+    EXTENDED: 30 * 24 * 60 * 60 * 1000, // 30 days
+    RESET: 60 * 60 * 1000, // 1 hour
+    TFA: 10 * 60 * 1000 // 10 minutes
+  },
+  PASSWORD_POLICY: {
+    MIN_LENGTH: 8,
+    PBKDF2_ITERATIONS: 10000
+  },
+  RATE_LIMITING: {
+    MAX_ATTEMPTS: 5,
+    RESET_TIME: 15 * 60 * 1000, // 15 minutes
+    LOCKOUT_DURATION: 30 * 60 * 1000 // 30 minutes
+  },
+  // Added for CSRF protection
+  CSRF_TOKEN_LENGTH: 32
+};
 
 // For a production app, this would be handled by a backend service
 // This is an improved client-side implementation with localStorage persistence
@@ -22,31 +46,72 @@ const saveUsersToStorage = (users) => {
   }
 };
 
-// More secure password hashing using CryptoJS (still not as secure as server-side bcrypt)
-const hashPassword = (password) => {
-  // Using SHA-256 with a salt (better than btoa but still not ideal)
-  const salt = "DRD_FITNESS_SECURE_SALT_2025"; // In production, use unique salt per user
-  return CryptoJS.SHA256(password + salt).toString();
+// Generate a secure random string for CSRF tokens
+const generateRandomString = (length) => {
+  return CryptoJS.lib.WordArray.random(length).toString();
 };
 
-// Generate more secure JWT-like token 
+// More secure password hashing using CryptoJS with stronger algorithm
+const hashPassword = (password) => {
+  // Generate a random salt for each user (in production, store this salt with the user)
+  const generateSalt = () => CryptoJS.lib.WordArray.random(16).toString();
+  const salt = generateSalt();
+  
+  // Use PBKDF2 with 10000 iterations (more secure than simple SHA-256)
+  const key = CryptoJS.PBKDF2(password, salt, { 
+    keySize: 256/32, 
+    iterations: 10000,
+    hasher: CryptoJS.algo.SHA256
+  }).toString();
+  
+  return {
+    salt: salt,
+    hash: key
+  };
+};
+
+// Verify password against stored hash
+const verifyPassword = (password, storedHash) => {
+  // If old format (just string), use old verification
+  if (typeof storedHash === 'string') {
+    const salt = "DRD_FITNESS_SECURE_SALT_2025";
+    return CryptoJS.SHA256(password + salt).toString() === storedHash;
+  }
+  
+  // New format with salt
+  const key = CryptoJS.PBKDF2(password, storedHash.salt, { 
+    keySize: 256/32, 
+    iterations: 10000,
+    hasher: CryptoJS.algo.SHA256
+  }).toString();
+  
+  return key === storedHash.hash;
+};
+
+// Generate more secure JWT-like token with CSRF protection
 const generateToken = (user, rememberMe = false) => {
+  // Generate a separate CSRF token
+  const csrfToken = generateRandomString(SECURITY_CONFIG.CSRF_TOKEN_LENGTH/2);
+  
   const payload = {
     id: user.id,
     email: user.email,
     // Set token expiration based on "remember me" option
-    exp: Date.now() + (rememberMe ? 30 : 1) * 24 * 60 * 60 * 1000, // 30 days or 1 day
+    exp: Date.now() + (rememberMe ? SECURITY_CONFIG.TOKEN_EXPIRY.EXTENDED : SECURITY_CONFIG.TOKEN_EXPIRY.STANDARD), // 30 days or 1 day
     // Add a random nonce for CSRF protection
-    nonce: Math.random().toString(36).substring(2, 15)
+    nonce: Math.random().toString(36).substring(2, 15),
+    // Store CSRF token hash in the JWT
+    csrf: CryptoJS.SHA256(csrfToken).toString()
   };
   
   // Sign the token with a secret key
-  const secretKey = "DRD_FITNESS_JWT_SECRET_KEY"; // In production, use environment variables
+  const secretKey = SECURITY_CONFIG.JWT_SECRET; // In production, use environment variables
   const signature = CryptoJS.HmacSHA256(JSON.stringify(payload), secretKey).toString();
   
   return {
     payload: btoa(JSON.stringify(payload)),
-    signature: signature
+    signature: signature,
+    csrfToken: csrfToken // This would be stored in localStorage while the JWT would be in an HTTP-only cookie in production
   };
 };
 
@@ -62,16 +127,27 @@ export const validateToken = () => {
     // Verify token expiration
     if (Date.now() > payload.exp) {
       localStorage.removeItem('authToken');
+      localStorage.removeItem('csrfToken');
       return null;
     }
     
     // Verify signature
-    const secretKey = "DRD_FITNESS_JWT_SECRET_KEY";
+    const secretKey = SECURITY_CONFIG.JWT_SECRET;
     const expectedSignature = CryptoJS.HmacSHA256(JSON.stringify(payload), secretKey).toString();
     
     if (token.signature !== expectedSignature) {
       console.error("Invalid token signature");
       localStorage.removeItem('authToken');
+      localStorage.removeItem('csrfToken');
+      return null;
+    }
+    
+    // In a full implementation, we would verify the CSRF token here as well
+    const storedCsrfToken = localStorage.getItem('csrfToken');
+    if (!storedCsrfToken || CryptoJS.SHA256(storedCsrfToken).toString() !== payload.csrf) {
+      console.error("CSRF token validation failed");
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('csrfToken');
       return null;
     }
     
@@ -79,6 +155,7 @@ export const validateToken = () => {
   } catch (e) {
     console.error("Token validation error:", e);
     localStorage.removeItem('authToken');
+    localStorage.removeItem('csrfToken');
     return null;
   }
 };
@@ -87,11 +164,13 @@ export const validateToken = () => {
 const generateResetToken = (email) => {
   const payload = {
     email,
-    exp: Date.now() + 1 * 60 * 60 * 1000, // 1 hour expiry
-    code: Math.floor(100000 + Math.random() * 900000).toString() // 6-digit code
+    exp: Date.now() + SECURITY_CONFIG.TOKEN_EXPIRY.RESET, // 1 hour expiry
+    code: Math.floor(100000 + Math.random() * 900000).toString(), // 6-digit code
+    // Add unique ID to prevent token reuse
+    id: generateRandomString(16)
   };
   
-  const secretKey = "DRD_FITNESS_RESET_SECRET_KEY";
+  const secretKey = SECURITY_CONFIG.RESET_SECRET;
   const signature = CryptoJS.HmacSHA256(JSON.stringify(payload), secretKey).toString();
   
   return {
@@ -117,18 +196,21 @@ const validateResetToken = (token, code) => {
     }
     
     // Verify signature
-    const secretKey = "DRD_FITNESS_RESET_SECRET_KEY";
+    const secretKey = SECURITY_CONFIG.RESET_SECRET;
     const expectedSignature = CryptoJS.HmacSHA256(JSON.stringify(payload), secretKey).toString();
     
     if (token.signature !== expectedSignature) {
       return { valid: false, message: "Invalid token signature" };
     }
     
-    return { valid: true, email: payload.email };
+    return { valid: true, email: payload.email, tokenId: payload.id };
   } catch (e) {
     return { valid: false, message: "Invalid reset token" };
   }
 };
+
+// Track used tokens to prevent reuse attacks
+const usedResetTokens = new Set();
 
 const Authentication = ({ onAuthenticated }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -187,7 +269,7 @@ const Authentication = ({ onAuthenticated }) => {
     const now = Date.now();
     
     // Reset counter after 15 minutes
-    if (now - lastAttemptTime > 15 * 60 * 1000) {
+    if (now - lastAttemptTime > SECURITY_CONFIG.RATE_LIMITING.RESET_TIME) {
       setLoginAttempts(1);
       setLastAttemptTime(now);
       return true;
@@ -198,7 +280,7 @@ const Authentication = ({ onAuthenticated }) => {
     setLastAttemptTime(now);
     
     // Block if more than 5 attempts in 15 minutes
-    return loginAttempts < 5;
+    return loginAttempts < SECURITY_CONFIG.RATE_LIMITING.MAX_ATTEMPTS;
   };
 
   // Simulate sending 2FA code (would be SMS/email in real app)
@@ -215,7 +297,7 @@ const Authentication = ({ onAuthenticated }) => {
         return { 
           ...u, 
           twoFactorCode: code,
-          twoFactorExpires: Date.now() + 10 * 60 * 1000 // 10 min expiry
+          twoFactorExpires: Date.now() + SECURITY_CONFIG.TOKEN_EXPIRY.TFA // 10 min expiry
         };
       }
       return u;
@@ -239,7 +321,7 @@ const Authentication = ({ onAuthenticated }) => {
     // Find user
     const user = users.find(u => u.email === email);
     
-    if (!user || user.password !== hashPassword(password)) {
+    if (!user || !verifyPassword(password, user.password)) {
       setError('Invalid email or password');
       
       // Update failed login attempts for account lockout
@@ -247,8 +329,8 @@ const Authentication = ({ onAuthenticated }) => {
         const updatedUsers = users.map(u => {
           if (u.id === user.id) {
             const failedAttempts = (u.failedAttempts || 0) + 1;
-            const accountLocked = failedAttempts >= 5;
-            const lockUntil = accountLocked ? Date.now() + 30 * 60 * 1000 : null; // Lock for 30 minutes
+            const accountLocked = failedAttempts >= SECURITY_CONFIG.RATE_LIMITING.MAX_ATTEMPTS;
+            const lockUntil = accountLocked ? Date.now() + SECURITY_CONFIG.RATE_LIMITING.LOCKOUT_DURATION : null; // Lock for 30 minutes
             
             return { 
               ...u, 
@@ -312,9 +394,13 @@ const Authentication = ({ onAuthenticated }) => {
   };
   
   const completeLogin = (user) => {
-    // Generate and store auth token
+    // Generate and store auth token with CSRF protection
     const token = generateToken(user, rememberMe);
-    localStorage.setItem('authToken', JSON.stringify(token));
+    localStorage.setItem('authToken', JSON.stringify({
+      payload: token.payload,
+      signature: token.signature
+    }));
+    localStorage.setItem('csrfToken', token.csrfToken);
     
     // Store last login timestamp
     const updatedUsers = users.map(u => {
@@ -351,7 +437,11 @@ const Authentication = ({ onAuthenticated }) => {
       twoFactorEnabled: false
     };
     
-    setUsers([...users, newUser]);
+    // Update users state and immediately save to localStorage
+    const updatedUsers = [...users, newUser];
+    setUsers(updatedUsers);
+    saveUsersToStorage(updatedUsers); // Explicitly save to localStorage immediately
+    
     setSuccessMessage('Registration successful! Please log in.');
     setIsLogin(true);
     setEmail('');
@@ -392,6 +482,12 @@ const Authentication = ({ onAuthenticated }) => {
       return;
     }
     
+    // Check if token has been used before (prevent token reuse)
+    if (usedResetTokens.has(validation.tokenId)) {
+      setError('This reset code has already been used');
+      return;
+    }
+    
     // Show password reset form
     setSuccessMessage('Code verified. Please enter a new password.');
     setIsResetting(true);
@@ -414,6 +510,15 @@ const Authentication = ({ onAuthenticated }) => {
       setError('Reset session expired. Please try again.');
       return;
     }
+    
+    // Prevent token reuse
+    if (usedResetTokens.has(validation.tokenId)) {
+      setError('This reset code has already been used');
+      return;
+    }
+    
+    // Mark token as used
+    usedResetTokens.add(validation.tokenId);
     
     // Update user password
     const updatedUsers = users.map(u => {
@@ -805,6 +910,7 @@ const Authentication = ({ onAuthenticated }) => {
 // Add the logout function that's being exported but wasn't defined
 const logout = () => {
   localStorage.removeItem('authToken');
+  localStorage.removeItem('csrfToken');
   // You might want to clear other auth-related data here
   return null;
 };
